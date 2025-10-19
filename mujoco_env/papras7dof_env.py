@@ -35,10 +35,7 @@ class PaprasEnv:
                     'robot1/joint4',
                     'robot1/joint5',
                     'robot1/joint6',
-                    'robot1/gripper',
-                    "robot1/gripper_r2",
-                    "robot1/gripper_l1",
-                    "robot1/gripper_l2"
+                    'robot1/joint7'
                     ]
         self.init_viewer()
         self.reset(seed)
@@ -62,11 +59,11 @@ class PaprasEnv:
         Move the robot to a initial position, set the object positions based on the seed
         '''
         if seed != None: np.random.seed(seed=0) 
-        q_init = np.deg2rad([0,0,0,0,0,0,0,0,0,0])
+        q_init = np.deg2rad(np.zeros(7))
         q_zero,ik_err_stack,ik_info = solve_ik(
             env = self.env,
             joint_names_for_ik = self.joint_names,
-            body_name_trgt     = 'robot1/gripper_main_link',
+            body_name_trgt     = 'robot1/end_effector_link',
             q_init       = q_init, # ik from zero pose
             p_trgt       = np.array([0.3,0.0,1.0]),
             R_trgt       = rpy2r(np.deg2rad([90,-0.,90 ])),
