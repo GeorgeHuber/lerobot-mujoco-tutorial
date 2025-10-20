@@ -27,7 +27,7 @@ class PaprasEnv:
         self.env = MuJoCoParserClass(name='Tabletop',rel_xml_path=xml_path)
         self.action_type = action_type
         self.state_type = state_type
-
+        self.q_init = None
         self.joint_names = [
                     'robot1/joint1',
                     'robot1/joint2',
@@ -65,17 +65,23 @@ class PaprasEnv:
         Move the robot to a initial position, set the object positions based on the seed
         '''
         if seed != None: np.random.seed(seed=0) 
-        q_init = np.deg2rad(np.zeros(7))
-        q_init = self.env.get_qpos_joints(joint_names=self.joint_names)
+        # q_init = np.deg2rad(np.zeros(7))
+        if self.q_init is None:
+            self.q_init = self.env.get_qpos_joints(joint_names=self.joint_names)
+            self.q_init[0] += 3.1415
+            # self.p_init, _ = self.env.get_pR_body(body_name='robot1/end_effector_link')
+        # p, r = self.env.get_pR_body(body_name='robot1/end_effector_link')
+        # print(q_init, p, r2rpy(r))
         q_zero,ik_err_stack,ik_info = solve_ik(
             env = self.env,
             joint_names_for_ik = self.joint_names,
             body_name_trgt     = 'robot1/end_effector_link',
-            q_init       = q_init, # ik from zero pose
-            p_trgt       = np.array([1,0.0,1.0]),
-            R_trgt       = rpy2r(np.deg2rad([0,-0, 0 ])),
+            q_init       = self.q_init, # ik from zero pose
+            p_trgt       = np.array([0.2,0.0,0.9]),
+            R_trgt       = rpy2r(np.deg2rad([0,0, 0 ])),
         )
-        q_zero = q_init
+        # q_zero = self.q_init
+        q_zero = copy.deepcopy(q_zero)
         self.env.forward(q=q_zero,joint_names=self.joint_names,increase_tick=False)
 
         # Set object positions
@@ -253,13 +259,13 @@ class PaprasEnv:
         dpos = np.zeros(3)
         drot = np.eye(3)
         if self.env.is_key_pressed_repeat(key=glfw.KEY_S):
-            dpos += np.array([0.007,0.0,0.0])
+            dpos -= np.array([0.007,0.0,0.0])
         if self.env.is_key_pressed_repeat(key=glfw.KEY_W):
-            dpos += np.array([-0.007,0.0,0.0])
+            dpos -= np.array([-0.007,0.0,0.0])
         if self.env.is_key_pressed_repeat(key=glfw.KEY_A):
-            dpos += np.array([0.0,-0.007,0.0])
+            dpos -= np.array([0.0,-0.007,0.0])
         if self.env.is_key_pressed_repeat(key=glfw.KEY_D):
-            dpos += np.array([0.0,0.007,0.0])
+            dpos -= np.array([0.0,0.007,0.0])
         if self.env.is_key_pressed_repeat(key=glfw.KEY_R):
             dpos += np.array([0.0,0.0,0.007])
         if self.env.is_key_pressed_repeat(key=glfw.KEY_F):
