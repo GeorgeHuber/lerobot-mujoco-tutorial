@@ -19,9 +19,9 @@ import pdb
 SEED = 0 
 # SEED = None <- Uncomment this line to randomize the object positions
 
-REPO_NAME = 'omy_pnp'
+REPO_NAME = 'papras7dof_pnp'
 NUM_DEMO = 1 # Number of demonstrations to collect
-ROOT = "./demo_data" # The root directory to save the demonstrations
+ROOT = "./papras7dof_demo" # The root directory to save the demonstrations
 
 TASK_NAME = 'Put mug cup on the plate' 
 xml_path = './asset/papras_scene.xml'
@@ -32,8 +32,9 @@ PnPEnv = PaprasEnv(xml_path, seed = SEED, state_type = 'joint_angle')
 create_new = True
 if os.path.exists(ROOT):
     print(f"Directory {ROOT} already exists.")
-    ans = input("Do you want to delete it? (y/n) ")
-    if ans == 'y':
+    # ans = input("Do you want to delete it? (y/n) ")
+    # if ans == 'y':
+    if True:
         import shutil
         shutil.rmtree(ROOT)
     else:
@@ -42,8 +43,8 @@ if os.path.exists(ROOT):
 
 if create_new:
     dataset = LeRobotDataset.create(
-                ROOT,
-                repo_id=REPO_NAME,
+                REPO_NAME,
+                root=ROOT,
                 robot_type="papras7dof",
                 fps=20, # 20 frames per second
                 features={
@@ -64,8 +65,8 @@ if create_new:
                     },
                     "action": {
                         "dtype": "float32",
-                        "shape": (7,),
-                        "names": ["action"], # 6 joint angles and 1 gripper
+                        "shape": (8,),
+                        "names": ["action"], # 7 joint angles and 1 gripper
                     },
                     "obj_init": {
                         "dtype": "float32",
@@ -84,6 +85,7 @@ action = np.zeros(7)
 episode_id = 0
 record_flag = False # Start recording when the robot starts moving
 while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
+
     PnPEnv.step_env()
     if PnPEnv.env.loop_every(HZ=20):
         # check if the episode is done

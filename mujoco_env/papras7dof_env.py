@@ -60,14 +60,16 @@ class PaprasEnv:
         '''
         if seed != None: np.random.seed(seed=0) 
         q_init = np.deg2rad(np.zeros(7))
+        q_init = self.env.get_qpos_joints(joint_names=self.joint_names)
         q_zero,ik_err_stack,ik_info = solve_ik(
             env = self.env,
             joint_names_for_ik = self.joint_names,
             body_name_trgt     = 'robot1/end_effector_link',
             q_init       = q_init, # ik from zero pose
-            p_trgt       = np.array([0.3,0.0,1.0]),
-            R_trgt       = rpy2r(np.deg2rad([90,-0.,90 ])),
+            p_trgt       = np.array([1,0.0,1.0]),
+            R_trgt       = rpy2r(np.deg2rad([0,-0, 0 ])),
         )
+        q_zero = q_init
         self.env.forward(q=q_zero,joint_names=self.joint_names,increase_tick=False)
 
         # Set object positions
@@ -89,11 +91,11 @@ class PaprasEnv:
         # Set the initial pose of the robot
         self.last_q = copy.deepcopy(q_zero)
         self.q = np.concatenate([q_zero, np.array([0.0]*4)])
-        self.p0, self.R0 = self.env.get_pR_body(body_name='robot1/gripper_main_link')
+        self.p0, self.R0 = self.env.get_pR_body(body_name='robot1/end_effector_link')
         mug_init_pose, plate_init_pose = self.get_obj_pose()
         self.obj_init_pose = np.concatenate([mug_init_pose, plate_init_pose],dtype=np.float32)
-        for _ in range(100):
-            self.step_env()
+        # for _ in range(100):
+        #     self.step_env()
         print("DONE INITIALIZATION")
         self.gripper_state = False
         self.past_chars = []
@@ -106,7 +108,7 @@ class PaprasEnv:
         returns:
             state: np.array, state of the environment after taking the action
                 - ee_pose: [px,py,pz,r,p,y]
-                - joint_angle: [j1,j2,j3,j4,j5,j6]
+                - joint_angle: [j1,j2,j3,j4,j5,j6,j7]
 
         '''
         if self.action_type == 'eef_pose':
@@ -116,7 +118,7 @@ class PaprasEnv:
             q ,ik_err_stack,ik_info = solve_ik(
                 env                = self.env,
                 joint_names_for_ik = self.joint_names,
-                body_name_trgt     = 'robot1/gripper_main_link',
+                body_name_trgt     = 'robot1/end_effector_link',
                 q_init             = q,
                 p_trgt             = self.p0,
                 R_trgt             = self.R0,
@@ -163,7 +165,7 @@ class PaprasEnv:
         self.rgb_agent = self.env.get_fixed_cam_rgb(
             cam_name='agentview')
         self.rgb_ego = self.env.get_fixed_cam_rgb(
-            cam_name='egocentric')
+            cam_name='realsense_d435')
         # self.rgb_top = self.env.get_fixed_cam_rgbd_pcd(
         #     cam_name='topview')
         self.rgb_side = self.env.get_fixed_cam_rgb(
@@ -176,7 +178,7 @@ class PaprasEnv:
         Render the environment
         '''
         self.env.plot_time()
-        p_current, R_current = self.env.get_pR_body(body_name='robot1/gripper_main_link')
+        p_current, R_current = self.env.get_pR_body(body_name='robot1/end_effector_link')
         R_current = R_current @ np.array([[1,0,0],[0,0,1],[0,1,0 ]])
         self.env.plot_sphere(p=p_current, r=0.02, rgba=[0.95,0.05,0.05,0.5])
         self.env.plot_capsule(p=p_current, R=R_current, r=0.01, h=0.2, rgba=[0.05,0.95,0.05,0.5])
@@ -200,7 +202,7 @@ class PaprasEnv:
             [j1,j2,j3,j4,j5,j6,gripper]
         '''
         qpos = self.env.get_qpos_joints(joint_names=self.joint_names)
-        gripper = self.env.get_qpos_joint('rh_r1')
+        gripper = self.env.get_qpos_joint('robot1/gripper')
         gripper_cmd = 1.0 if gripper[0] > 0.5 else 0.0
         return np.concatenate([qpos, [gripper_cmd]],dtype=np.float32)
     
@@ -285,7 +287,7 @@ class PaprasEnv:
         '''
         delta = self.compute_q - self.last_q
         self.last_q = copy.deepcopy(self.compute_q)
-        gripper = self.env.get_qpos_joint('rh_r1')
+        gripper = self.env.get_qpos_joint('robot1/gripper')
         gripper_cmd = 1.0 if gripper[0] > 0.5 else 0.0
         return np.concatenate([delta, [gripper_cmd]],dtype=np.float32)
 
@@ -297,7 +299,7 @@ class PaprasEnv:
         '''
         p_mug = self.env.get_p_body('body_obj_mug_5')
         p_plate = self.env.get_p_body('body_obj_plate_11')
-        if np.linalg.norm(p_mug[:2] - p_plate[:2]) < 0.1 and np.linalg.norm(p_mug[2] - p_plate[2]) < 0.6 and self.env.get_qpos_joint('rh_r1') < 0.1:
+        if np.linalg.norm(p_mug[:2] - p_plate[:2]) < 0.1 and np.linalg.norm(p_mug[2] - p_plate[2]) < 0.6 and self.env.get_qpos_joint('robot1/gripper') < 0.1:
             p = self.env.get_p_body('robot1/gripper_main_link')[2]
             if p > 0.9:
                 return True
@@ -331,6 +333,6 @@ class PaprasEnv:
         '''
         get the end effector pose of the robot + gripper state
         '''
-        p, R = self.env.get_pR_body(body_name='robot1/gripper_main_link')
+        p, R = self.env.get_pR_body(body_name='robot1/end_effector_link')
         rpy = r2rpy(R)
         return np.concatenate([p, rpy],dtype=np.float32)
