@@ -37,6 +37,12 @@ class PaprasEnv:
                     'robot1/joint6',
                     'robot1/joint7'
                     ]
+        self.gripper_names = [
+            'robot1/gripper',
+            'robot1/gripper_r2',
+            'robot1/gripper_l1',
+            'robot1/gripper_l2'
+        ]
         self.init_viewer()
         self.reset(seed)
 
@@ -94,8 +100,8 @@ class PaprasEnv:
         self.p0, self.R0 = self.env.get_pR_body(body_name='robot1/end_effector_link')
         mug_init_pose, plate_init_pose = self.get_obj_pose()
         self.obj_init_pose = np.concatenate([mug_init_pose, plate_init_pose],dtype=np.float32)
-        # for _ in range(100):
-        #     self.step_env()
+        for _ in range(100):
+            self.step_env()
         print("DONE INITIALIZATION")
         self.gripper_state = False
         self.past_chars = []
@@ -153,7 +159,7 @@ class PaprasEnv:
             raise ValueError('state_type not recognized')
 
     def step_env(self):
-        self.env.step(self.q)
+        self.env.step(self.q, joint_names=np.concatenate([self.joint_names, self.gripper_names]))
 
     def grab_image(self):
         '''
@@ -179,7 +185,7 @@ class PaprasEnv:
         '''
         self.env.plot_time()
         p_current, R_current = self.env.get_pR_body(body_name='robot1/end_effector_link')
-        R_current = R_current @ np.array([[1,0,0],[0,0,1],[0,1,0 ]])
+        R_current = R_current #@ np.array([[1,0,0],[0,0,1],[0,1,0 ]])
         self.env.plot_sphere(p=p_current, r=0.02, rgba=[0.95,0.05,0.05,0.5])
         self.env.plot_capsule(p=p_current, R=R_current, r=0.01, h=0.2, rgba=[0.05,0.95,0.05,0.5])
         rgb_egocentric_view = add_title_to_img(self.rgb_ego,text='Egocentric View',shape=(640,480))
@@ -300,7 +306,7 @@ class PaprasEnv:
         p_mug = self.env.get_p_body('body_obj_mug_5')
         p_plate = self.env.get_p_body('body_obj_plate_11')
         if np.linalg.norm(p_mug[:2] - p_plate[:2]) < 0.1 and np.linalg.norm(p_mug[2] - p_plate[2]) < 0.6 and self.env.get_qpos_joint('robot1/gripper') < 0.1:
-            p = self.env.get_p_body('robot1/gripper_main_link')[2]
+            p = self.env.get_p_body('robot1/end_effector_link')[2]
             if p > 0.9:
                 return True
         return False

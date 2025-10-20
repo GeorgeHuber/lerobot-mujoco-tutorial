@@ -96,7 +96,7 @@ while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
             PnPEnv.reset(seed = SEED)
             episode_id += 1
         # Teleoperate the robot and get delta end-effector pose with gripper
-        action, reset  = PnPEnv.teleop_robot()
+        action, reset  = PnPEnv.teleop_robot() #pos, rot, gripper_bool
         if not record_flag and sum(action) != 0:
             record_flag = True
             print("Start recording")
