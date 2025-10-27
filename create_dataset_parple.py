@@ -40,7 +40,7 @@ TASK_NAME = 'Put mug cup on the plate'
 xml_path = './asset/papras_scene.xml'
 # pdb.set_trace()
 # Define the environment
-PnPEnv = PaprasEnv(xml_path, seed = SEED, state_type = 'joint_angle')
+PnPEnv = PaprasEnv(xml_path, seed = SEED, action_type='joint_angle', state_type = 'joint_angle')
 
 
 
@@ -150,8 +150,10 @@ while not leader.is_ready:
     time.sleep(0.01)
     
 initial_command = leader.get_status()
+print("initial_command:", initial_command)
 initial_qpos = teleop.step(initial_command, initial=True) # process initial command
-
+print(initial_qpos)
+# input("press enter: ")
 while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
 
     PnPEnv.step_env()
@@ -172,6 +174,9 @@ while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
                 time.sleep(0.01)
             leader.close_init()
             command = leader.get_status()
+            print(command)
+            print(initial_qpos)
+            # input("press enter again")
             initial_qpos = teleop.step(command, initial=True)
             # env.initialize(initial_qpos)
             # if TIME_DEBUG: log_time('Reset Time')
@@ -189,6 +194,9 @@ while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
         # 1. Get command from leader
         command = leader.get_status()
         step_dict['command'] = command
+        print(command[0]['robot1'][3,:3])
+        # print(initial_qpos)
+        # input("press enter again again")
         
         #@TODO: harmonize resets
         action, reset  = PnPEnv.teleop_robot() #pos, rot, gripper_bool
@@ -217,7 +225,7 @@ while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
         wrist_image = wrist_image.resize((256, 256))
         agent_image = np.array(agent_image)
         wrist_image = np.array(wrist_image)
-        print(qposes)
+        # print(qposes)
         joint_q = PnPEnv.step(qposes)
         if record_flag:
             # Add the frame to the dataset

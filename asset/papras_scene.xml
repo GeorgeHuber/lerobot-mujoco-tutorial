@@ -29,6 +29,10 @@
    
 
     <include file="./papras_7dof/papras_7dof.xml" />
+    <!-- YOTAM add apple, orange, pear -->
+    <include file="./tabletop/object/obj_apple.xml"/>
+    <include file="./tabletop/object/obj_orange.xml"/>
+    
     <include file="./objaverse/mug_5/model_new.xml"/>
     <include file="./objaverse/plate_11/model_new.xml"/>
     <!-- <include file="./objaverse/mug_6/model_new.xml"/> -->
