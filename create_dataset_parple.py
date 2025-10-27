@@ -18,6 +18,15 @@ sys.path.append('/home/student/Desktop/')
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 import pdb
 
+from PAPRLE.configs import BaseConfig
+from PAPRLE.paprle.teleoperator import Teleoperator
+from PAPRLE.paprle.follower import Robot
+from PAPRLE.paprle.leaders import LEADERS_DICT
+
+from PAPRLE.paprle.utils.misc import make_episode
+from threading import Thread
+import argparse
+
 # If you want to randomize the object positions, set this to None
 # If you fix the seed, the object positions will be the same every time
 SEED = 0 
@@ -32,6 +41,8 @@ xml_path = './asset/papras_scene.xml'
 # pdb.set_trace()
 # Define the environment
 PnPEnv = PaprasEnv(xml_path, seed = SEED, state_type = 'joint_angle')
+
+
 
 create_new = True
 if os.path.exists(ROOT):
@@ -89,23 +100,15 @@ action = np.zeros(7)
 episode_id = 0
 record_flag = False # Start recording when the robot starts moving
 
-from PARPLE.configs import BaseConfig
-import argparse
+
 # Parse command line arguments
 parser = argparse.ArgumentParser(add_help=False, formatter_class=RawTextHelpFormatter)
 parser.add_argument('--save_dir', type=str, default='demo_data', help='Directory to save the collected data')
 
-follower_config, leader_config, env_config = BaseConfig().parse(parser)
+robot_config, leader_config, env_config = BaseConfig().parse(parser)
 args, _ = parser.parse_known_args()
 SAVE_DIR_BASE = args.save_dir
 
-from PARPLE.paprle.teleoperator import Teleoperator
-from PARPLE.paprle.follower import Robot
-from PARPLE.paprle.leaders import LEADERS_DICT
-from PARPLE.paprle.envs import ENV_DICT
-from PARPLE.paprle.feedback import Feedback
-from PARPLE.paprle.utils.misc import make_episode
-from threading import Thread
 
 
 # create our configurations for collision checking, teleop and env
@@ -138,17 +141,17 @@ def shutdown_handler(sig, frame):
 signal.signal(signal.SIGINT, shutdown_handler)
 
 reset = False
+init_env_qpos = PnPEnv.q_init
 teleop.reset(init_env_qpos)
 shutdown = leader.launch_init(init_env_qpos)
-if shutdown: return
+if shutdown: exit(0)
 while not leader.is_ready:
     if shutdown: exit(0)
     time.sleep(0.01)
     
 initial_command = leader.get_status()
 initial_qpos = teleop.step(initial_command, initial=True) # process initial command
-self.env.initialize(initial_qpos) # slowly move to initial qpos, using moveit
-if TIME_DEBUG: self.log_time('Initialization Time')
+
 while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
 
     PnPEnv.step_env()
@@ -158,22 +161,22 @@ while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
         if done: 
             # Save the episode data and reset the environment
             
-            self.reset = False
-            init_env_qpos = self.env.reset()
-            save_dir = make_episode(self.robot_config, self.leader_config, self.env_config, folder_name=SAVE_DIR_BASE)
-            self.teleop.reset(init_env_qpos)
-            shutdown = self.leader.launch_init(init_env_qpos)  # Wait in the initialize function until the leader is ready (for visionpro and gello)
-            if shutdown: return
-            while not self.leader.is_ready:
-                if self.shutdown: return
+            reset = False
+            # init_env_qpos = env.reset()
+            # save_dir = make_episode(robot_config, leader_config, self.env_config, folder_name=SAVE_DIR_BASE)
+            teleop.reset(init_env_qpos)
+            shutdown = leader.launch_init(init_env_qpos)  # Wait in the initialize function until the leader is ready (for visionpro and gello)
+            if shutdown: exit(0)
+            while not leader.is_ready:
+                if shutdown: exit(0)
                 time.sleep(0.01)
-            self.leader.close_init()
-            command = self.leader.get_status()
-            initial_qpos = self.teleop.step(command, initial=True)
-            self.env.initialize(initial_qpos)
-            if TIME_DEBUG: self.log_time('Reset Time')
-            self.leader.require_end = False
-\
+            leader.close_init()
+            command = leader.get_status()
+            initial_qpos = teleop.step(command, initial=True)
+            # env.initialize(initial_qpos)
+            # if TIME_DEBUG: log_time('Reset Time')
+            leader.require_end = False
+
             dataset.save_episode()
             PnPEnv.reset(seed = SEED)
             episode_id += 1
@@ -181,16 +184,16 @@ while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
         # Teleoperate the robot and get delta end-effector pose with 
         
         step_dict = {}
-        step_dict['obs'] = self.env.get_observation()
+        # step_dict['obs'] = env.get_observation()
 
         # 1. Get command from leader
-        command = self.leader.get_status()
+        command = leader.get_status()
         step_dict['command'] = command
         
         #@TODO: harmonize resets
         action, reset  = PnPEnv.teleop_robot() #pos, rot, gripper_bool
         #@TODO: continuous gripper or binary?
-        qposes = self.teleop.step(command)
+        qposes = teleop.step(command)
         
         step_dict['target_qpos'] = qposes
         if not record_flag and sum(action) != 0:
@@ -214,7 +217,8 @@ while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
         wrist_image = wrist_image.resize((256, 256))
         agent_image = np.array(agent_image)
         wrist_image = np.array(wrist_image)
-        joint_q = PnPEnv.step(action)
+        print(qposes)
+        joint_q = PnPEnv.step(qposes)
         if record_flag:
             # Add the frame to the dataset
             dataset.add_frame( {
