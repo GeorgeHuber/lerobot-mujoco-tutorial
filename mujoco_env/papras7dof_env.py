@@ -15,7 +15,8 @@ class PaprasEnv:
                  xml_path,
                 action_type='eef_pose', 
                 state_type='joint_angle',
-                seed = None):
+                seed = None,
+                q_init = None):
         """
         args:
             xml_path: str, path to the xml file
@@ -27,7 +28,11 @@ class PaprasEnv:
         self.env = MuJoCoParserClass(name='Tabletop',rel_xml_path=xml_path)
         self.action_type = action_type
         self.state_type = state_type
-        self.q_init = None
+        self.q_init = q_init
+        if self.q_init is None:
+            # self.q_init = self.env.get_qpos_joints(joint_names=self.joint_names)
+            self.q_init   = np.array([ 1.51811272e-03, -1.03167055e+00, -3.26837696e-04,  4.69888307e-01,
+       -4.49022090e-04,  1.12128792e+00,  3.48691354e-05])
         self.joint_names = [
                     'robot1/joint1',
                     'robot1/joint2',
@@ -53,7 +58,8 @@ class PaprasEnv:
         self.env.reset()
         self.env.init_viewer(
             distance          = 2.0,
-            elevation         = -30, 
+            elevation         = -60, 
+            azimuth=350,
             transparent       = False,
             black_sky         = True,
             use_rgb_overlay = False,
@@ -65,10 +71,11 @@ class PaprasEnv:
         Move the robot to a initial position, set the object positions based on the seed
         '''
         if seed != None: np.random.seed(seed=0) 
-        # q_init = np.deg2rad(np.zeros(7))
-        if self.q_init is None:
-            self.q_init = self.env.get_qpos_joints(joint_names=self.joint_names)
-            self.q_init[0] += 3.1415
+        # self.q_init = np.deg2rad(np.full(7, 180))
+    #     if self.q_init is None:
+    #         # self.q_init = self.env.get_qpos_joints(joint_names=self.joint_names)
+    #         self.q_init   = np.array([ 1.51811272e-03, -1.03167055e+00, -3.26837696e-04,  4.69888307e-01,
+    #    -4.49022090e-04,  1.12128792e+00,  3.48691354e-05])
             # self.p_init, _ = self.env.get_pR_body(body_name='robot1/end_effector_link')
         # p, r = self.env.get_pR_body(body_name='robot1/end_effector_link')
         # print(q_init, p, r2rpy(r))
@@ -77,7 +84,7 @@ class PaprasEnv:
             joint_names_for_ik = self.joint_names,
             body_name_trgt     = 'robot1/end_effector_link',
             q_init       = self.q_init, # ik from zero pose
-            p_trgt       = np.array([0.2,0.0,0.9]),
+            p_trgt       = np.array([0.2,0.0,1.4]),
             R_trgt       = rpy2r(np.deg2rad([0,0, 0 ])),
         )
         # q_zero = self.q_init
@@ -89,7 +96,7 @@ class PaprasEnv:
         n_obj = len(obj_names)
         obj_xyzs = sample_xyzs(
             n_obj,
-            x_range   = [+0.24,+0.4],
+            x_range   = [+0.04,+0.14],
             y_range   = [-0.2,+0.2],
             z_range   = [0.82,0.82],
             min_dist  = 0.2,

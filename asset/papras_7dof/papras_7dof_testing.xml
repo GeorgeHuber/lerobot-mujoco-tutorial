@@ -31,7 +31,7 @@
   </default>
 
   <worldbody>
-    <body name="robot1/link1" pos="-0.3 0 0.7715" euler="0 0 3.1415926532897962326">
+    <body name="robot1/link1" pos="-0.3 0 0.7715">
       <inertial pos="0.00023 0 0.06223" quat="0.999978 0 -0.00662802 0" mass="0.85644" diaginertia="0.00121079 0.00120886 0.000380884"/>
       <geom type="mesh" mesh="link1"/>
       <body name="robot1/link2" pos="0 0 0.126">

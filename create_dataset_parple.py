@@ -148,11 +148,12 @@ if shutdown: exit(0)
 while not leader.is_ready:
     if shutdown: exit(0)
     time.sleep(0.01)
-    
+# pdb.set_trace()
+
 initial_command = leader.get_status()
 print("initial_command:", initial_command)
 initial_qpos = teleop.step(initial_command, initial=True) # process initial command
-print(initial_qpos)
+
 # input("press enter: ")
 while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
 
@@ -166,24 +167,25 @@ while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
             reset = False
             # init_env_qpos = env.reset()
             # save_dir = make_episode(robot_config, leader_config, self.env_config, folder_name=SAVE_DIR_BASE)
-            teleop.reset(init_env_qpos)
-            shutdown = leader.launch_init(init_env_qpos)  # Wait in the initialize function until the leader is ready (for visionpro and gello)
-            if shutdown: exit(0)
-            while not leader.is_ready:
+            if episode_id < NUM_DEMO - 1:
+                teleop.reset(init_env_qpos)
+                shutdown = leader.launch_init(init_env_qpos)  # Wait in the initialize function until the leader is ready (for visionpro and gello)
                 if shutdown: exit(0)
-                time.sleep(0.01)
-            leader.close_init()
-            command = leader.get_status()
-            print(command)
-            print(initial_qpos)
-            # input("press enter again")
-            initial_qpos = teleop.step(command, initial=True)
-            # env.initialize(initial_qpos)
-            # if TIME_DEBUG: log_time('Reset Time')
-            leader.require_end = False
+                while not leader.is_ready:
+                    if shutdown: exit(0)
+                    time.sleep(0.01)
+                leader.close_init()
+                command = leader.get_status()
+                # print(command)
+                # print(initial_qpos)
+                # input("press enter again")
+                initial_qpos = teleop.step(command, initial=True)
+                # env.initialize(initial_qpos)
+                # if TIME_DEBUG: log_time('Reset Time')
+                leader.require_end = False
+                PnPEnv.reset(seed = SEED)
 
             dataset.save_episode()
-            PnPEnv.reset(seed = SEED)
             episode_id += 1
             
         # Teleoperate the robot and get delta end-effector pose with 
@@ -194,7 +196,8 @@ while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
         # 1. Get command from leader
         command = leader.get_status()
         step_dict['command'] = command
-        print(command[0]['robot1'][3,:3])
+        # print(command)
+        # breakpoint()
         # print(initial_qpos)
         # input("press enter again again")
         
@@ -204,10 +207,12 @@ while PnPEnv.env.is_viewer_alive() and episode_id < NUM_DEMO:
         qposes = teleop.step(command)
         
         step_dict['target_qpos'] = qposes
-        if not record_flag and sum(action) != 0:
+        # print(record_flag, action, reset)
+        if not record_flag:
             record_flag = True
             print("Start recording")
         if reset:
+            # pdb.set_trace()
             # Reset the environment and clear the episode buffer
             # This can be done by pressing 'z' key
             PnPEnv.reset(seed=SEED)
